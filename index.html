@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta
+      name="description"
+      content="A synthetic correlation heatmap lab. Inspect paired observations and see how a trailing window changes Pearson correlation."
+    />
+    <title>crossweave · A correlation study</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="src/app.js"></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="#">crossweave <span>/ 08</span></a
+      ><span class="header-note">A correlation study</span
+      ><a href="#method">Model &amp; method ↓</a>
+    </header>
+    <main>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">THE WINDOW IS PART OF THE ANSWER.</p>
+          <h1>Same signals.<br />Different picture.</h1>
+        </div>
+        <p class="lede">
+          A heatmap compresses a relationship into one number. Choose a window,
+          then open a cell to see what that number leaves out.
+        </p>
+      </section>
+      <form id="controls" novalidate>
+        <div class="field">
+          <label for="scenario">Synthetic model</label
+          ><select id="scenario">
+            <option value="flip">Follower flips after 120</option>
+            <option value="steady">Steady relationships</option>
+            <option value="flat">Flat signal F</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="window">Trailing observations</label
+          ><select id="window">
+            <option>40</option>
+            <option selected>80</option>
+            <option>120</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="end">Window ends at / 1-240</label
+          ><input
+            id="end"
+            type="number"
+            value="240"
+            min="40"
+            max="240"
+            step="1"
+            required
+          />
+        </div>
+        <div class="field">
+          <label for="seed">Seed / whole number</label
+          ><input
+            id="seed"
+            type="number"
+            value="2026"
+            min="1"
+            max="4294967295"
+            step="1"
+            required
+          />
+        </div>
+        <button class="apply" type="submit">Apply window ↗</button>
+        <p id="status" role="status" aria-live="polite"></p>
+        <p class="bounds">
+          240 invented observations. End must be at least the window length.
+          Seed 1-4,294,967,295. No market data, files, accounts or saved
+          settings.
+        </p>
+      </form>
+      <div class="workspace">
+        <section class="matrix-area">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">01 / PAIRED, NOT PREDICTIVE</p>
+              <h2>The current window</h2>
+            </div>
+            <span id="window-label" class="mono"></span>
+          </div>
+          <p class="helper">
+            Select any cell. On narrow screens, scroll the matrix sideways.
+          </p>
+          <div
+            class="scroll"
+            role="region"
+            aria-label="Correlation matrix, scroll horizontally on narrow screens"
+            tabindex="0"
+          >
+            <table id="heatmap">
+              <caption>
+                Pearson r · same observations in every cell
+              </caption>
+            </table>
+          </div>
+          <div class="key">
+            <span class="negative">−1 opposite</span
+            ><span>0 no linear link</span
+            ><span class="positive">+1 together</span><span>NA constant</span>
+          </div>
+          <p class="helper">
+            Signed values are rounded to two decimals, not measures of
+            certainty. Color uses the fixed −1 to +1 range; NA is not zero.
+          </p>
+        </section>
+        <section class="pair-area">
+          <p class="eyebrow">02 / LOOK BEHIND THE CELL</p>
+          <h2 id="pair-title">A × B</h2>
+          <div class="pair-inputs">
+            <label for="pair-x"
+              >Horizontal signal<select id="pair-x"></select></label
+            ><label for="pair-y"
+              >Vertical signal<select id="pair-y"></select
+            ></label>
+          </div>
+          <div class="pair-stats">
+            <div><span>Current r</span><strong id="r-now"></strong></div>
+            <div><span>First window r</span><strong id="r-first"></strong></div>
+            <div><span>Change in r</span><strong id="r-change"></strong></div>
+          </div>
+          <svg
+            id="scatter"
+            role="img"
+            aria-label="Scatter plot of the selected signals in the applied window"
+          ></svg>
+          <p class="helper" id="scatter-note"></p>
+          <p id="pair-message" class="message"></p>
+        </section>
+      </div>
+      <section class="rolling-area">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">03 / THE RELATIONSHIP MOVES</p>
+            <h2>A different window, every point.</h2>
+          </div>
+          <span id="rolling-label" class="mono"></span>
+        </div>
+        <svg
+          id="rolling"
+          role="img"
+          aria-label="Trailing Pearson correlation for every possible window of the selected length"
+        ></svg>
+        <p class="helper">
+          Trailing windows end at the horizontal coordinate. The plot spans all
+          240 generated observations, including ends after the selected window;
+          it is not an as-of backtest. Neighboring windows overlap, so these
+          estimates are not independent. The solid marker is the applied end; a
+          dashed vertical line marks the model change after observation 120,
+          when enabled.
+        </p>
+        <details>
+          <summary>Numerical statistics for the selected pair</summary>
+          <table class="stats-table">
+            <caption id="stats-caption"></caption>
+            <thead>
+              <tr>
+                <th scope="col">Quantity</th>
+                <th scope="col" id="x-col">Horizontal</th>
+                <th scope="col" id="y-col">Vertical</th>
+              </tr>
+            </thead>
+            <tbody id="stats-body"></tbody>
+          </table>
+          <p class="helper" id="covariance"></p>
+        </details>
+      </section>
+      <section id="method">
+        <div>
+          <p class="eyebrow">READ THE GENERATOR, NOT A STORY.</p>
+          <h2>Association is<br />not explanation.</h2>
+          <p>
+            All six signals are invented and unitless. They are not asset
+            returns, forecasts, diversification advice or evidence about a
+            market.
+          </p>
+        </div>
+        <div class="method-copy">
+          <h3>One set of observations</h3>
+          <p>
+            Pearson r is the centered cross-product divided by the product of
+            centered lengths. The matrix, scatter and selected rolling point use
+            exactly the same window. Sample covariance and standard deviations
+            use n − 1.
+          </p>
+          <h3>Small r is not independence</h3>
+          <p>
+            Signal E is a noisy square of A, so a visible curved relationship
+            can have a small linear correlation. Inspect A × E. Correlation does
+            not prove cause and effect. A large magnitude does not make a
+            relationship stable.
+          </p>
+          <h3>A flat signal's r is undefined</h3>
+          <p>
+            In the flat model, F is zero at every observation. Every correlation
+            involving F, including its diagonal, is undefined and shown as NA.
+            It is never replaced with zero or one.
+          </p>
+          <details>
+            <summary>The exact synthetic model &amp; numerical choices</summary>
+            <p>
+              Each observation draws six successive xorshift32 values, scaled to
+              approximately uniform [−√3, +√3): f, a, b, c, e, h. A = f; B =
+              0.8f + 0.6a; C = −0.6f + 0.8b; D = 0.7c + 0.3a; E = f² − 1 +
+              0.25e; F = h. The flip model changes B's f coefficient to −0.8
+              starting at observation 121. The flat model keeps the steady
+              coefficients and sets F = 0. The seed repeats exactly in this
+              implementation.
+            </p>
+            <p>
+              First-window r always uses observations 1 through the selected
+              length, not the previous view. Change in r is current minus
+              first-window r, in unitless correlation points. Samples are
+              finite; empirical correlations need not equal generator
+              coefficients. No significance tests, confidence intervals,
+              missing-data handling or real data are modeled.
+            </p>
+            <p>
+              Calculation uses shifted, compensated centered sums on bounded
+              generated signals, with r clipped to [−1, +1] for floating-point
+              rounding. Raw statistics below use six decimal places; rounding is
+              not exact arithmetic. Rolling windows are recomputed, not
+              estimated from prior rounded values.
+            </p>
+          </details>
+          <p class="sources">
+            References:
+            <a
+              href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.pearsonr.html"
+              >Pearson r</a
+            >
+            ·
+            <a
+              href="https://www.itl.nist.gov/div898/handbook/eda/section3/scatterp.htm"
+              >Scatter &amp; causality</a
+            >
+            ·
+            <a
+              href="https://numpy.org/doc/stable/reference/generated/numpy.corrcoef.html"
+              >Correlation matrix</a
+            >
+          </p>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <span>crossweave / Java reference + local browser lab</span
+      ><span>No uploads. No tracking. No investment advice.</span>
+    </footer>
+    <noscript
+      >This lab needs JavaScript. It makes no background network
+      connections.</noscript
+    >
+  </body>
+</html>

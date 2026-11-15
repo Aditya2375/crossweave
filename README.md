@@ -1,5 +1,7 @@
 # crossweave
 
+[Open the live lab](https://aditya2375.github.io/crossweave/)
+
 A Java-first synthetic correlation lab. Move a trailing window through six invented signals, inspect an annotated Pearson correlation matrix, open a pair's scatter plot, and trace its correlation across overlapping windows.
 
 ## Explore
